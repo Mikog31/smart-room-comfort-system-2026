@@ -1,0 +1,1 @@
+# smart-room-comfort-system-2026
