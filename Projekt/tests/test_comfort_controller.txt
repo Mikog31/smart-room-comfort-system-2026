@@ -1,0 +1,111 @@
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src", "backend"))
+
+from comfort_controller import ComfortProfile, analyze_comfort
+
+
+def test_high_co2_turns_on_ventilation():
+    profile = ComfortProfile(max_co2=1000.0)
+
+    measurement = {
+        "temperature": 22.0,
+        "humidity": 45.0,
+        "co2": 1500.0,
+        "light_level": 400.0,
+        "noise_level": 40.0,
+        "occupancy": True
+    }
+
+    decision = analyze_comfort(measurement, profile)
+
+    assert decision["ventilation"] == "ON"
+    assert decision["alert"] == "Przekroczono dopuszczalny poziom CO2."
+
+
+def test_empty_room_enables_eco_mode():
+    profile = ComfortProfile()
+
+    measurement = {
+        "temperature": 22.0,
+        "humidity": 45.0,
+        "co2": 700.0,
+        "light_level": 500.0,
+        "noise_level": 35.0,
+        "occupancy": False
+    }
+
+    decision = analyze_comfort(measurement, profile)
+
+    assert decision["mode"] == "ECO"
+    assert decision["ventilation"] == "ECO"
+    assert decision["lighting"] == "OFF"
+
+
+def test_low_temperature_turns_on_heating():
+    profile = ComfortProfile(min_temperature=20.0)
+
+    measurement = {
+        "temperature": 18.5,
+        "humidity": 50.0,
+        "co2": 700.0,
+        "light_level": 350.0,
+        "noise_level": 42.0,
+        "occupancy": True
+    }
+
+    decision = analyze_comfort(measurement, profile)
+
+    assert decision["heating"] == "ON"
+
+
+def test_high_temperature_turns_on_cooling():
+    profile = ComfortProfile(max_temperature=24.0)
+
+    measurement = {
+        "temperature": 28.0,
+        "humidity": 45.0,
+        "co2": 800.0,
+        "light_level": 400.0,
+        "noise_level": 40.0,
+        "occupancy": True
+    }
+
+    decision = analyze_comfort(measurement, profile)
+
+    assert decision["cooling"] == "ON"
+
+
+def test_low_light_turns_on_lighting():
+    profile = ComfortProfile(min_light_level=300.0)
+
+    measurement = {
+        "temperature": 22.0,
+        "humidity": 45.0,
+        "co2": 800.0,
+        "light_level": 120.0,
+        "noise_level": 40.0,
+        "occupancy": True
+    }
+
+    decision = analyze_comfort(measurement, profile)
+
+    assert decision["lighting"] == "ON"
+
+
+def test_high_noise_generates_alert():
+    profile = ComfortProfile(max_noise_level=55.0)
+
+    measurement = {
+        "temperature": 22.0,
+        "humidity": 45.0,
+        "co2": 800.0,
+        "light_level": 400.0,
+        "noise_level": 70.0,
+        "occupancy": True
+    }
+
+    decision = analyze_comfort(measurement, profile)
+
+    assert decision["alert"] == "Przekroczono dopuszczalny poziom hałasu."

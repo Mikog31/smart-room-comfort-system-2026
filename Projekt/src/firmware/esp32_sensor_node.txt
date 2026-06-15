@@ -1,0 +1,81 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+// Dane demonstracyjne sieci WiFi.
+// W prawdziwym projekcie nie należy wrzucać prawdziwego hasła do repozytorium.
+const char* ssid = "ROOM_WIFI";
+const char* password = "password";
+
+// Adres backendu działającego w tej samej sieci lokalnej.
+// Adres IP należy zmienić na adres komputera lub serwera z backendem.
+const char* serverUrl = "http://192.168.1.100:8000/api/v1/measurements";
+
+void setup() {
+  Serial.begin(115200);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println("Laczenie z WiFi...");
+  }
+
+  Serial.println("Polaczono z siecia WiFi");
+}
+
+void loop() {
+  /*
+    Wersja demonstracyjna.
+
+    Wartości parametrów środowiskowych są wpisane na stałe,
+    ponieważ ten kod służy do testowania komunikacji ESP32 z backendem.
+
+    W docelowej wersji projektu poniższe wartości powinny zostać
+    zastąpione rzeczywistymi odczytami z czujników, np. BME280, SCD30,
+    BH1750, PIR oraz modułu pomiaru hałasu.
+  */
+
+  float temperature = 22.5;
+  float humidity = 45.0;
+  float co2 = 850.0;
+  float lightLevel = 350.0;
+  float noiseLevel = 42.0;
+  bool occupancy = true;
+
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+
+    String payload = "{";
+    payload += "\"room_id\":1,";
+    payload += "\"temperature\":" + String(temperature) + ",";
+    payload += "\"humidity\":" + String(humidity) + ",";
+    payload += "\"co2\":" + String(co2) + ",";
+    payload += "\"light_level\":" + String(lightLevel) + ",";
+    payload += "\"noise_level\":" + String(noiseLevel) + ",";
+    payload += "\"occupancy\":";
+    payload += occupancy ? "true" : "false";
+    payload += "}";
+
+    int responseCode = http.POST(payload);
+
+    Serial.print("Kod odpowiedzi serwera: ");
+    Serial.println(responseCode);
+
+    if (responseCode > 0) {
+      String response = http.getString();
+      Serial.println("Odpowiedz serwera:");
+      Serial.println(response);
+    } else {
+      Serial.println("Blad wysylania danych do serwera.");
+    }
+
+    http.end();
+  } else {
+    Serial.println("Brak polaczenia WiFi.");
+  }
+
+  delay(30000);
+}
